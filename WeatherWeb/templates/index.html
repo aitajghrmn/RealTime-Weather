@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hava Proqnozu | Canlı Meteoroloji Məlumatlar</title>
+  <!-- Google Fonts: Fraunces (Serif temperatur üçün) & Inter (UI mətnləri üçün) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <!-- Künclərdə tünd bənövşəyi işıq ləkələri -->
+  <div class="corner-glow glow-top-left" aria-hidden="true"></div>
+  <div class="corner-glow glow-top-right" aria-hidden="true"></div>
+  <div class="corner-glow glow-bottom-left" aria-hidden="true"></div>
+  <div class="corner-glow glow-bottom-right" aria-hidden="true"></div>
+
+  <div class="app-wrapper">
+    <!-- Header & Axtarış Bölməsi -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-sun-icon" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+            <circle cx="16" cy="16" r="7" fill="#e8a33d"/>
+            <g stroke="#e8a33d" stroke-width="2" stroke-linecap="round">
+              <line x1="16" y1="2" x2="16" y2="5"/>
+              <line x1="16" y1="27" x2="16" y2="30"/>
+              <line x1="2" y1="16" x2="5" y2="16"/>
+              <line x1="27" y1="16" x2="30" y2="16"/>
+              <line x1="6.1" y1="6.1" x2="8.2" y2="8.2"/>
+              <line x1="23.8" y1="23.8" x2="25.9" y2="25.9"/>
+              <line x1="6.1" y1="25.9" x2="8.2" y2="23.8"/>
+              <line x1="23.8" y1="8.2" x2="25.9" y2="6.1"/>
+            </g>
+          </svg>
+        </div>
+        <div>
+          <h1>Hava Proqnozu</h1>
+          <p class="subtitle">Dəqiq və canlı meteoroloji məlumatlar</p>
+        </div>
+      </div>
+
+      <!-- Axtarış Formu -->
+      <form id="search-form" class="search-form">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            id="city-input" 
+            placeholder="Şəhər adını daxil edin (məs: Bakı, Gəncə, London)..." 
+            autocomplete="off" 
+            spellcheck="false"
+            required
+          >
+          <button type="button" id="clear-btn" class="clear-btn" title="Təmizlə" aria-label="Axtarışı təmizlə" style="display: none;">
+            &times;
+          </button>
+        </div>
+        <button type="submit" id="search-btn" class="btn btn-primary" title="Axtar">
+          <span>Axtar</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" id="geo-btn" class="btn btn-secondary" title="Cari yerimi müəyyən et" aria-label="Məkanım">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path>
+          </svg>
+          <span class="desktop-only">Məkanım</span>
+        </button>
+      </form>
+
+      <!-- Tez Axtarış Teqləri -->
+      <div class="quick-tags" id="quick-tags">
+        <button type="button" class="tag-btn" data-city="Bakı">Bakı</button>
+        <button type="button" class="tag-btn" data-city="Gəncə">Gəncə</button>
+        <button type="button" class="tag-btn" data-city="Sumqayıt">Sumqayıt</button>
+        <button type="button" class="tag-btn" data-city="Şuşa">Şuşa</button>
+        <button type="button" class="tag-btn" data-city="Şəki">Şəki</button>
+        <button type="button" class="tag-btn" data-city="Naxçıvan">Naxçıvan</button>
+        <button type="button" class="tag-btn" data-city="İstanbul">İstanbul</button>
+      </div>
+    </header>
+
+    <!-- Mərkəzi Sahə -->
+    <main class="main-content">
+      <!-- Loading State -->
+      <div id="loading-state" class="center-card state-card" style="display: none;">
+        <div class="spinner"></div>
+        <p class="loading-text">Hava məlumatları yüklənir...</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="error-state" class="center-card state-card error-card" style="display: none;">
+        <div class="error-badge">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#ef4444" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12" stroke-linecap="round"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke-linecap="round"></line>
+          </svg>
+        </div>
+        <h2 id="error-title">Şəhər tapılmadı</h2>
+        <p id="error-message">Zəhmət olmasa şəhər adını düzgün yazdığınızdan əmin olun.</p>
+        <button type="button" id="retry-btn" class="btn btn-primary">Yenidən cəhd et</button>
+      </div>
+
+      <!-- MƏRKƏZİ ŞÜŞƏVARİ (GLASSMORPHISM) KART -->
+      <div id="weather-view" class="center-card glass-card" style="display: none;">
+        
+        <!-- Yuxarı Məkan və Canlı Status -->
+        <div class="card-top-bar">
+          <div class="location-group">
+            <div class="location-title">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#e8a33d" stroke-width="2">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                <circle cx="12" cy="9" r="2.5"/>
+              </svg>
+              <h2 id="current-city-name" class="city-name">Bakı</h2>
+              <span id="current-country" class="country-pill">Azərbaycan</span>
+            </div>
+            <p id="current-date-time" class="date-text">Yüklənir...</p>
+          </div>
+
+          <div class="live-pill">
+            <span class="live-indicator"></span>
+            <span id="source-text">Canlı Proqnoz</span>
+          </div>
+        </div>
+
+        <!-- Mərkəzi Temperatur və Təsvir (Hero Section) -->
+        <div class="weather-hero">
+          <div class="hero-left">
+            <div class="temp-display">
+              <span id="current-temp" class="temp-number">--</span>
+              <span class="degree-mark">°</span>
+            </div>
+            <div class="condition-info">
+              <h3 id="current-condition-text" class="condition-title">Məlumat yoxdur</h3>
+              <div class="high-low-temps">
+                <span>Maks: <strong id="today-max-temp">--°</strong></span>
+                <span class="divider">/</span>
+                <span>Min: <strong id="today-min-temp">--°</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-right">
+            <div class="weather-illustration" id="current-weather-icon-wrapper">
+              <!-- SVG Hava İkonu -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 KİÇİK STATİSTİKA KARTI (BİR SIRADA: Rütubət, Külək, Hiss olunan) -->
+        <div class="stats-row">
+          <!-- 1. Rütubət -->
+          <div class="stat-card">
+            <div class="stat-icon-wrap icon-humidity">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+              </svg>
+            </div>
+            <div class="stat-details">
+              <span class="stat-label">Rütubət</span>
+              <span id="metric-humidity" class="stat-value">--%</span>
+            </div>
+          </div>
+
+          <!-- 2. Külək -->
+          <div class="stat-card">
+            <div class="stat-icon-wrap icon-wind">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+              </svg>
+            </div>
+            <div class="stat-details">
+              <span class="stat-label">Külək</span>
+              <span id="metric-wind" class="stat-value">-- km/s</span>
+            </div>
+          </div>
+
+          <!-- 3. Hiss olunan temperatur -->
+          <div class="stat-card">
+            <div class="stat-icon-wrap icon-feels">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+              </svg>
+            </div>
+            <div class="stat-details">
+              <span class="stat-label">Hiss olunan</span>
+              <span id="metric-apparent" class="stat-value">--°C</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- AŞAĞIDA 6 GÜNLÜK ÜFÜQİ SÜRÜŞƏN (SCROLL) PROQNOZ KARTLARI -->
+        <section class="forecast-section">
+          <div class="forecast-section-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#e8a33d" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>6 Günlük Hava Proqnozu</span>
+          </div>
+
+          <div class="forecast-scroll-wrapper">
+            <div id="forecast-cards-grid" class="forecast-cards-scroll">
+              <!-- JavaScript tərəfindən 6 günlük kartlar inject olunur -->
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Flask Backend + Open-Meteo Pulsuz API</p>
+    </footer>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
